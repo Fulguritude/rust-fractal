@@ -1,8 +1,8 @@
 //https://users.rust-lang.org/t/rust-sdl2-and-raw-textures-help/45636/7
 
-use palette::FromColor;
-use palette::rgb::Rgb;
-use palette::RgbHue;
+mod color;
+use color::*;
+
 use sdl2::video::WindowContext;
 //use sdl2::video::Window;
 //use sdl2::render::Canvas;
@@ -16,7 +16,6 @@ use sdl2::keyboard::Keycode;
 //use sdl2::rect::Rect;
 //use sdl2::rect::{Point};
 
-use palette::Hsl;
 
 use core::time::Duration;
 
@@ -25,6 +24,8 @@ use polynomials::poly;
 use polynomials::Polynomial;
 
 use num_complex::Complex;
+
+
 
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 type Float = f32;
@@ -71,24 +72,6 @@ pub fn get_dwell(z:Complex<Float>/*, poly:Polynomial<Complex<Float>>*/) -> u8
 	return MAX_DWELL;
 }
 
-pub fn get_color_from_dwell(dwell:u8) -> Color
-{
-	if dwell == MAX_DWELL
-	{
-		return Color::RGB(0, 0, 0);
-	}
-//	let dwell_to_byte:u8 = dwell * (255 / MAX_DWELL as u16) as u8;
-//	let dwell_float:Float = (dwell_to_byte as Float) / 255. * 360.;
-	let dwell_float:Float = (dwell as Float) / (MAX_DWELL as Float) * 360. - 180.;
-	let hsl:Hsl = Hsl::new(RgbHue::from_degrees(dwell_float), 220., 220.);
-	let rgb:Rgb = Rgb::from_hsl(hsl);//hsl.into_color();
-	return Color::RGB(
-		(rgb.red   * 255.) as u8,
-		(rgb.green * 255.) as u8,
-		(rgb.blue  * 255.) as u8,
-	);
-}
-
 pub fn get_complex_value_for_pixel(x:u32, y:u32, w:u32, h:u32) -> Complex<Float>
 {
 	let rel_x:Float = (x as Float) - (w as Float) / 2.;
@@ -107,13 +90,14 @@ pub fn get_complex_value_for_pixel(x:u32, y:u32, w:u32, h:u32) -> Complex<Float>
 
 pub fn main() -> Result<()>
 {
+	let get_color_from_dwell = get_grayscale_from_dwell;
+
 	let sdl_context = sdl2::init().unwrap();
 	let video_subsystem = sdl_context.video().unwrap();
 
 	let window = video_subsystem.window("rust-sdl2 demo", WINDOW_W, WINDOW_H)
 		.position_centered()
-		.build()
-		.unwrap();
+		.build()?;
 
 	let mut z:Complex<Float> = Complex{ re: 1.5, im: 1.5 };
 	println!("Dwell for {} is {}", z.to_string(), get_dwell(z));
@@ -188,7 +172,7 @@ pub fn main() -> Result<()>
 			}
 		}
 		// The rest of the game loop goes here...
-
+		canvas.copy(&texture, None, None)?;
 		canvas.present();
 		::std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 60));
 	}
