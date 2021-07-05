@@ -3,6 +3,15 @@
 mod color;
 use color::*;
 
+mod canvas;
+use canvas::*;
+
+mod fractal;
+use fractal::*;
+
+mod render;
+use render::*;
+
 use sdl2::video::WindowContext;
 //use sdl2::video::Window;
 //use sdl2::render::Canvas;
@@ -19,7 +28,6 @@ use sdl2::keyboard::Keycode;
 
 use core::time::Duration;
 
-
 use polynomials::poly;
 use polynomials::Polynomial;
 
@@ -34,64 +42,45 @@ type Float = f32;
 //const COMPLEX_UNIT:Complex<Float> = Complex { re: 1., im: 0. };
 
 const MAX_DWELL:u8 = 32;
-const WINDOW_W:u32 = 800;
+const WINDOW_W:u32 = 600;
 const WINDOW_H:u32 = 600;
 const WINDOW_BYTES:usize = 4 * (WINDOW_W * WINDOW_H) as usize;
 const WINDOW_PITCH:usize = 4 * WINDOW_W as usize; //number of bytes in a window row
 
 const COMPLEX_PLANE_CENTER:Complex<Float> = Complex { re: 0., im: 0. };
-const COMPLEX_PLANE_STEP:Float = 1.5 / ((WINDOW_W as Float) / 2.);
-//const iter_poly:Polynomial<Complex<Float>> =
-//	poly!
-//	[
-//		Complex { re: 0., im: 0. }, //COMPLEX_NULL,
-//		Complex { re: 0., im: 0. }, //COMPLEX_NULL,
-//		Complex { re: 1., im: 0. }, //COMPLEX_UNIT,
-//	];
+//const COMPLEX_PLANE_STEP:Float = 1.5 / ((WINDOW_W as Float) / 2.);
+const DEFAULT_ZOOM:Float = 3.;
 
-pub fn get_dwell(z:Complex<Float>/*, poly:Polynomial<Complex<Float>>*/) -> u8
+
+
+fn init_fractal() -> Fractal<Float>
 {
-	let iter_poly:Polynomial<Complex<Float>> =
-	poly!
-	[
-		z,//Complex::from_polar(0.7885, 1.),//Complex { re: 0.765, im: 0.432 },//z, //COMPLEX_NULL,
-		Complex { re: 0., im: 0. }, //COMPLEX_NULL,
-		Complex { re: 1., im: 0. }, //COMPLEX_UNIT,
-	];
-
-	let mut z_iter:Complex<Float> = z;
-
-	for dwell in 0..MAX_DWELL
+	let fractal:Fractal<Float> = Fractal
 	{
-		z_iter = iter_poly.eval(z_iter).unwrap();
-		if z_iter.norm_sqr() > 2.
-		{
-			return dwell;
-		}
-	}
-	return MAX_DWELL;
-}
+		anchor:             COMPLEX_PLANE_CENTER,
+		color_protocol:     ColorProtocol::Grayscale,
+		iteration_protocol: FractalProtocol::Mandelbrot,
+		render_protocol:    RenderProtocol::PixelByPixel,
+//		radius:             2.,
+		radius_sqrd:        4.,
+		render_w:           WINDOW_W,
+		render_h:           WINDOW_H,
+		zoom:				DEFAULT_ZOOM,
+		iter_poly:
+			poly!
+			[
+				Complex { re: 1., im: 0.5 }, //COMPLEX_NULL,
+				Complex { re: 0., im: 0. }, //COMPLEX_NULL,
+				Complex { re: 1., im: 0. }, //COMPLEX_UNIT,
+			]
+	};
 
-pub fn get_complex_value_for_pixel(x:u32, y:u32, w:u32, h:u32) -> Complex<Float>
-{
-	let rel_x:Float = (x as Float) - (w as Float) / 2.;
-	let rel_y:Float = (y as Float) - (h as Float) / 2.;
 
-	let offset_from_center =
-		Complex
-		{
-			re: rel_x * COMPLEX_PLANE_STEP,
-			im: rel_y * COMPLEX_PLANE_STEP,
-		}
-	;
-
-	return COMPLEX_PLANE_CENTER + offset_from_center;
+	return fractal;
 }
 
 pub fn main() -> Result<()>
 {
-	let get_color_from_dwell = get_grayscale_from_dwell;
-
 	let sdl_context = sdl2::init().unwrap();
 	let video_subsystem = sdl_context.video().unwrap();
 
@@ -99,59 +88,21 @@ pub fn main() -> Result<()>
 		.position_centered()
 		.build()?;
 
-	let mut z:Complex<Float> = Complex{ re: 1.5, im: 1.5 };
-	println!("Dwell for {} is {}", z.to_string(), get_dwell(z));
-
 	let mut canvas = window.into_canvas().build().unwrap();
 
 	canvas.set_draw_color(Color::RGB(60, 200, 255));
 	canvas.clear();
 	canvas.present();
 
-//	let mut fractal:Surface = Surface::new(WINDOW_W, WINDOW_H, sdl2::pixels::PixelFormatEnum::Index8)?;
-	let mut fractal:[u8; WINDOW_BYTES] = [0; WINDOW_BYTES];
 
-	for y in 0..WINDOW_H
-	{
-		for x in 0..WINDOW_W
-		{
-			z = get_complex_value_for_pixel(x,y,WINDOW_W,WINDOW_H);
-			let dwell = get_dwell(z);
-//println!("Dwell for {} is {}", z, dwell);
-			let color = get_color_from_dwell(dwell);
-//println!("Color: {} {} {}", color.r, color.g, color.b);
-//			fractal.fill_rect(Rect::new(x as i32,y as i32,1,1), color)?;
-			fractal[(4 * (y * WINDOW_W + x)    ) as usize] = color.r;
-			fractal[(4 * (y * WINDOW_W + x) + 1) as usize] = color.g;
-			fractal[(4 * (y * WINDOW_W + x) + 2) as usize] = color.b;
-			fractal[(4 * (y * WINDOW_W + x) + 3) as usize] = color.a;
-//			canvas.set_draw_color(color);
-//			canvas
-//				.draw_point(Point::new(x as i32, y as i32))
-//				.expect("could not draw point");
-		}
-	}
+	let fractal_settings:Fractal<Float> = init_fractal();
+//	let fractal_data:[u8; WINDOW_BYTES] = render_fractal(fractal_settings);
+	let fractal_data:Vec<u8> = render_fractal(&fractal_settings);
 
-//	let mut canvas_surface:Canvas<Surface> = Canvas::from_surface(fractal)?; 
-//	let surface_ref:&mut SurfaceRef = Canvas::surface_mut(&mut canvas_surface);
-
-//	let texture_creator = canvas.texture_creator();
-//	let mut texture = texture_creator
-//		.create_texture_target(texture_creator.default_pixel_format(), 150, 150)
-//		.unwrap();
-//	canvas.with_texture_canvas(&mut texture, |texture_canvas|
-//		{
-//		    texture_canvas.set_draw_color(Color::RGBA(0, 0, 0, 255));
-//		    texture_canvas.clear();
-//		    texture_canvas.set_draw_color(Color::RGBA(255, 0, 0, 255));
-//		    texture_canvas.fill_rect(Rect::new(50, 50, 50, 50)).unwrap();
-//		}
-//	)?;
 
 	let texture_creator:TextureCreator<WindowContext> = canvas.texture_creator();
 	let mut texture:Texture = texture_creator.create_texture_target(texture_creator.default_pixel_format(), WINDOW_W, WINDOW_H)?;
-//	Texture::update(&mut texture, None, &fractal, WINDOW_PITCH)?;
-	texture.update(None, &fractal, WINDOW_PITCH)?;
+	texture.update(None, &fractal_data, WINDOW_PITCH)?;
 	canvas.copy(&texture, None, None)?;
 
 
