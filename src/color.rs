@@ -1,8 +1,12 @@
-use crate::Dwell;
 use crate::Fractal;
+use crate::Dwell;
+use crate::DwellState;
+use crate::DwellArray;
 use crate::Float;
 use crate::MAX_DWELL;
 use crate::WINDOW_BYTES;
+
+use contracts::ensures;
 
 use sdl2::pixels::Color;
 
@@ -17,6 +21,7 @@ pub enum ColorProtocol
 {
 	Grayscale,
 	Hue,
+	MarianiSilver,
 }
 
 pub fn get_grayscale_from_dwell(dwell:u8) -> Color
@@ -47,65 +52,51 @@ pub fn get_hue_from_dwell(dwell:u8) -> Color
 	);
 }
 
-pub fn get_color_from_dwell(fractal:&Fractal<Float>, dwell:u8) -> Color
+pub fn get_ms_color_from_dwell(dwell:Dwell) -> Color
+{
+	match dwell.state
+	{
+		DwellState::Computed  => { return Color::RGB(0, 0, 0); }
+		DwellState::Inferred  => { return get_hue_from_dwell(dwell.value); }
+		DwellState::Unchecked => { panic!("get_ms_color_from_dwell: Unchecked dwell"); } //{ return Color::RGB(255, 255, 255); }
+	}
+}
+
+pub fn get_color_from_dwell(fractal: &Fractal<Float>, dwell: Dwell) -> Color
 {
 	match fractal.color_protocol
 	{
-		ColorProtocol::Grayscale => get_grayscale_from_dwell(dwell),
-		ColorProtocol::Hue       =>       get_hue_from_dwell(dwell),
+		ColorProtocol::Grayscale     => get_grayscale_from_dwell(dwell.value),
+		ColorProtocol::Hue           =>       get_hue_from_dwell(dwell.value),
+		ColorProtocol::MarianiSilver =>  get_ms_color_from_dwell(dwell),
 	}
 }
 
 
 
-pub fn colorarray_from_dwellarray(fractal:&Fractal<Float>, dwell_array:Vec<Dwell>) -> Vec<Color>
+pub fn colorarray_from_dwellarray(fractal:&Fractal<Float>, dwell_array:DwellArray) -> Vec<Color>
 {
-	let mut color_array:Vec<Color>;
+	let color_array :Vec<Color>;
 	color_array = dwell_array
 		.into_iter()
-		.map(|dwell| get_color_from_dwell(fractal, dwell.value))
-		.collect::<Vec<Color>>();
+		.map(|dwell| get_color_from_dwell(fractal, dwell))
+		.collect();
 	return color_array;
 }
 
-pub fn dataarray_from_colorarray(fractal:&Fractal<Float>, color_array:Vec<Color>) -> Vec<u8>
-//-> [u8; WINDOW_BYTES]
+#[ensures(ret.len() == WINDOW_BYTES)]
+pub fn dataarray_from_colorarray
+(
+//	fractal:     &Fractal<Float>,
+	color_array: Vec<Color>
+)
+-> Vec<u8>
 {
-//	let mut fractal_data_array:[u8; WINDOW_BYTES] = [0; WINDOW_BYTES];
-//	for y in 0..fractal.render_h
-//	{
-//		for x in 0..fractal.render_w
-//		{
-//			let pixel_index:usize = (y * fractal.render_w + x) as usize;
-//			fractal_data_array[(4 * pixel_index    ) as usize] = color_array[pixel_index].r;
-//			fractal_data_array[(4 * pixel_index + 1) as usize] = color_array[pixel_index].g;
-//			fractal_data_array[(4 * pixel_index + 2) as usize] = color_array[pixel_index].b;
-//			fractal_data_array[(4 * pixel_index + 3) as usize] = color_array[pixel_index].a;
-//		}
-//	}
-
-//	let fractal_data_array:Vec<u8> = color_array
-//		.into_iter()
-//		.map(|color| vec![color.r, color.g, color.b, color.a])
-//		.collect::<Vec<Vec<u8>>>()
-//		.into_iter()
-//		.fold
-//		(
-//			vec![] as Vec<u8>,
-//			|acc, next|
-//				acc
-//					.into_iter()
-//					.chain(next.into_iter())
-//					.collect::<Vec<u8>>()
-//		)
-//	;
-
-	let fractal_data_array:Vec<u8> = color_array
+	let fractal_data_array: Vec<u8> = color_array
 		.into_iter()
 		.flat_map(|color| vec![color.r, color.g, color.b, color.a])
-		.collect::<Vec<u8>>()
+		.collect()
 	;
 
-	assert_eq!(WINDOW_BYTES, fractal_data_array.len());
 	return fractal_data_array;
 }

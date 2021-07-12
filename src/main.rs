@@ -38,18 +38,18 @@ use num_complex::Complex;
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 type Float = f32;
 
-//const COMPLEX_NULL:Complex<Float> = Complex { re: 0., im: 0. };
-//const COMPLEX_UNIT:Complex<Float> = Complex { re: 1., im: 0. };
+//const COMPLEX_NULL: Complex<Float> = Complex { re: 0., im: 0. };
+//const COMPLEX_UNIT: Complex<Float> = Complex { re: 1., im: 0. };
 
-const MAX_DWELL:u8 = 32;
-const WINDOW_W:u32 = 600;
-const WINDOW_H:u32 = 600;
-const WINDOW_BYTES:usize = 4 * (WINDOW_W * WINDOW_H) as usize;
-const WINDOW_PITCH:usize = 4 * WINDOW_W as usize; //number of bytes in a window row
+const MAX_DWELL:    u8    = 32;
+const WINDOW_W:     usize = 600;
+const WINDOW_H:     usize = 600;
+const WINDOW_BYTES: usize = 4 * (WINDOW_W * WINDOW_H) as usize;
+const WINDOW_PITCH: usize = 4 * WINDOW_W as usize; //number of bytes in a window row
 
-const COMPLEX_PLANE_CENTER:Complex<Float> = Complex { re: 0., im: 0. };
-//const COMPLEX_PLANE_STEP:Float = 1.5 / ((WINDOW_W as Float) / 2.);
-const DEFAULT_ZOOM:Float = 3.;
+//const COMPLEX_PLANE_STEP:   Float = 1.5 / ((WINDOW_W as Float) / 2.);
+const COMPLEX_PLANE_CENTER: Complex<Float> = Complex { re: 0., im: 0. };
+const DEFAULT_ZOOM:         Float = 3.;
 
 
 
@@ -58,9 +58,9 @@ fn init_fractal() -> Fractal<Float>
 	let fractal:Fractal<Float> = Fractal
 	{
 		anchor:             COMPLEX_PLANE_CENTER,
-		color_protocol:     ColorProtocol::Grayscale,
+		color_protocol:     ColorProtocol::MarianiSilver,
 		iteration_protocol: FractalProtocol::Mandelbrot,
-		render_protocol:    RenderProtocol::PixelByPixel,
+		render_protocol:    RenderProtocol::MarianiSilver,
 //		radius:             2.,
 		radius_sqrd:        4.,
 		render_w:           WINDOW_W,
@@ -84,7 +84,7 @@ pub fn main() -> Result<()>
 	let sdl_context = sdl2::init().unwrap();
 	let video_subsystem = sdl_context.video().unwrap();
 
-	let window = video_subsystem.window("rust-sdl2 demo", WINDOW_W, WINDOW_H)
+	let window = video_subsystem.window("rust-sdl2 demo", WINDOW_W as u32, WINDOW_H as u32)
 		.position_centered()
 		.build()?;
 
@@ -101,7 +101,7 @@ pub fn main() -> Result<()>
 
 
 	let texture_creator:TextureCreator<WindowContext> = canvas.texture_creator();
-	let mut texture:Texture = texture_creator.create_texture_target(texture_creator.default_pixel_format(), WINDOW_W, WINDOW_H)?;
+	let mut texture:Texture = texture_creator.create_texture_target(texture_creator.default_pixel_format(), WINDOW_W as u32, WINDOW_H as u32)?;
 	texture.update(None, &fractal_data, WINDOW_PITCH)?;
 	canvas.copy(&texture, None, None)?;
 

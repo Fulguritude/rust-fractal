@@ -1,4 +1,5 @@
 
+use crate::Point;
 use crate::Complex;
 use crate::fractal::Fractal;
 use crate::Float;
@@ -18,13 +19,18 @@ t_complex		get_complex_from_point(t_fractol *frac, t_s32 x, t_s32 y)
 }
 */
 
-pub fn get_complex_value_from_pixel(fractal:&Fractal<Float>, x:u32, y:u32) -> Complex<Float>
+pub fn get_complex_value_from_pixel
+(
+	fractal: &Fractal<Float>,
+	point:   Point,
+)
+-> Complex<Float>
 {
 	let inv_render_w:Float = 1. / (fractal.render_w as Float);
 	let inv_render_h:Float = 1. / (fractal.render_h as Float);
 
-	let rel_x:Float = (x as i32 - fractal.render_w as i32 / 2) as Float;
-	let rel_y:Float = (y as i32 - fractal.render_h as i32 / 2) as Float;
+	let rel_x:Float = (point.x as i32 - fractal.render_w as i32 / 2) as Float;
+	let rel_y:Float = (point.y as i32 - fractal.render_h as i32 / 2) as Float;
 
 	let offset_from_center =
 		Complex
