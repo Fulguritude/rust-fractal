@@ -254,7 +254,7 @@ pub fn compute_mariani_silver_quadtree
   	let mut dwell_array: DwellArray = get_empty_dwell_array(fractal);
 
 	let ini: Point = Point { x:                    0, y:                    0 };
-	let end:   Point = Point { x: fractal.render_w - 1, y: fractal.render_h - 1 };
+	let end: Point = Point { x: fractal.render_w - 1, y: fractal.render_h - 1 };
 
 	rec_mariani_silver_quadtree(fractal, &mut dwell_array, ini, end, 0);
 

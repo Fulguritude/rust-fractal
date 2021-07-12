@@ -1,8 +1,23 @@
 
-use crate::Point;
-use crate::Complex;
-use crate::fractal::Fractal;
+use crate::Fractal;
 use crate::Float;
+use crate::Complex;
+use crate::Point;
+use crate::TextureCreator;
+use crate::Texture;
+use crate::Canvas;
+use crate::Window;
+use crate::WindowContext;
+use crate::Result;
+use crate::WINDOW_H;
+use crate::WINDOW_W;
+use crate::WINDOW_PITCH;
+
+
+use crate::render_fractal;
+
+
+
 //use crate::COMPLEX_PLANE_STEP;
 //use crate::COMPLEX_PLANE_CENTER;
 /*
@@ -41,4 +56,16 @@ pub fn get_complex_value_from_pixel
 	;
 
 	return fractal.anchor + offset_from_center;
+}
+
+
+pub fn draw_fractal(canvas:&mut Canvas<Window>, fractal:&Fractal) -> Result<()>
+{
+println!("Rendering fractal...");
+	let fractal_data:Vec<u8> = render_fractal(fractal);
+	let texture_creator:TextureCreator<WindowContext> = canvas.texture_creator();
+	let mut texture:Texture = texture_creator.create_texture_target(texture_creator.default_pixel_format(), WINDOW_W as u32, WINDOW_H as u32)?;
+	texture.update(None, &fractal_data, WINDOW_PITCH)?;
+	canvas.copy(&texture, None, None)?;
+	Ok(())
 }

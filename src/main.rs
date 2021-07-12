@@ -12,9 +12,14 @@ use fractal::*;
 mod render;
 use render::*;
 
+mod event;
+use event::*;
+
+
+
 use sdl2::video::WindowContext;
-//use sdl2::video::Window;
-//use sdl2::render::Canvas;
+use sdl2::video::Window;
+use sdl2::render::Canvas;
 use sdl2::render::Texture;
 use sdl2::render::TextureCreator;
 use sdl2::pixels::Color;
@@ -27,16 +32,21 @@ use sdl2::keyboard::Keycode;
 
 
 use core::time::Duration;
+use time::Instant;
 
 use polynomials::poly;
 use polynomials::Polynomial;
 
-use num_complex::Complex;
+
+mod complex;
+use complex::*;
+
+//use num_complex::Complex;
 
 
 
-type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
-type Float = f32;
+pub type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
+pub type Float = f32;
 
 //const COMPLEX_NULL: Complex<Float> = Complex { re: 0., im: 0. };
 //const COMPLEX_UNIT: Complex<Float> = Complex { re: 1., im: 0. };
@@ -58,7 +68,7 @@ fn init_fractal() -> Fractal<Float>
 	let fractal:Fractal<Float> = Fractal
 	{
 		anchor:             COMPLEX_PLANE_CENTER,
-		color_protocol:     ColorProtocol::MarianiSilver,
+		color_protocol:     ColorProtocol::Hue,
 		iteration_protocol: FractalProtocol::Mandelbrot,
 		render_protocol:    RenderProtocol::MarianiSilver,
 //		radius:             2.,
@@ -79,6 +89,7 @@ fn init_fractal() -> Fractal<Float>
 	return fractal;
 }
 
+
 pub fn main() -> Result<()>
 {
 	let sdl_context = sdl2::init().unwrap();
@@ -88,23 +99,15 @@ pub fn main() -> Result<()>
 		.position_centered()
 		.build()?;
 
-	let mut canvas = window.into_canvas().build().unwrap();
+	let mut canvas:Canvas<Window> = window.into_canvas().build().unwrap();
 
 	canvas.set_draw_color(Color::RGB(60, 200, 255));
 	canvas.clear();
 	canvas.present();
 
 
-	let fractal_settings:Fractal<Float> = init_fractal();
+	let mut fractal_settings:Fractal<Float> = init_fractal();
 //	let fractal_data:[u8; WINDOW_BYTES] = render_fractal(fractal_settings);
-	let fractal_data:Vec<u8> = render_fractal(&fractal_settings);
-
-
-	let texture_creator:TextureCreator<WindowContext> = canvas.texture_creator();
-	let mut texture:Texture = texture_creator.create_texture_target(texture_creator.default_pixel_format(), WINDOW_W as u32, WINDOW_H as u32)?;
-	texture.update(None, &fractal_data, WINDOW_PITCH)?;
-	canvas.copy(&texture, None, None)?;
-
 
 	let mut event_pump = sdl_context.event_pump().unwrap();
 
@@ -112,20 +115,20 @@ pub fn main() -> Result<()>
 	{
 		for event in event_pump.poll_iter()
 		{
-			match event
+			let should_quit: bool = handle_key_press(event, &mut fractal_settings);
+			if should_quit
 			{
-				Event::Quit {..} |
-				Event::KeyDown { keycode: Some(Keycode::Escape), .. } =>
-				{
-					break 'running
-				},
-				_ => {}
+				break 'running
 			}
 		}
-		// The rest of the game loop goes here...
-		canvas.copy(&texture, None, None)?;
+println!("Loop");
+
+let ini = Instant::now();
+		draw_fractal(&mut canvas, &fractal_settings)?;
+let end = Instant::now();
+println!("{} microseconds", (end - ini).whole_microseconds());
 		canvas.present();
-		::std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 60));
+		::std::thread::sleep(Duration::new(0, 2_000_000_000u32));
 	}
 
 	Ok(())
